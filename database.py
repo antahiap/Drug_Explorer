@@ -10,7 +10,7 @@ import os
 import json
 
 from config import SERVER_ROOT
-from mykeys import get_keys
+#from mykeys import get_keys
 # %%
 from flask import current_app, g
 
@@ -51,8 +51,12 @@ class Neo4jApp:
         self.batch_size = 5000
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
-        (uri, user, password, datapath, database) = get_keys(
-            server, password, user, datapath, database)
+        (uri, user, password, datapath, database) = (
+            'bolt://localhost:6687', 'neo4j', 'explr_gds', '', 'neo4j')
+        
+
+        #(uri, user, password, datapath, database) = get_keys(
+        #    server, password, user, datapath, database)
         self.data_path = datapath
         self.database = database
 
@@ -640,7 +644,7 @@ class Neo4jApp:
 
 
 if __name__ == '__main__':
-    db = Neo4jApp(server='txgnn_v2', user='neo4j', 
+    db = Neo4jApp(server='local', user='neo4j', 
                   database='neo4j', datapath='TxGNNExplorer_v2')
     db.init_database()
 # %%

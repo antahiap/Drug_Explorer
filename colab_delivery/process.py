@@ -44,8 +44,10 @@ import pickle
 #         pass
 
 # %%
-knowledge_graph = pd.read_csv('./knowledge_graph_v3.csv')
-knowledge_graph_proce = pd.read_csv('./knowledge_graph_v3_processed.csv')
+#knowledge_graph = pd.read_csv('./knowledge_graph_v3.csv')
+knowledge_graph = pd.read_csv('/home/apakiman/Repo/merck_gds_explr/.images/neo4j/data_primekg/kg.csv')
+#knowledge_graph_proce = pd.read_csv('./knowledge_graph_v3_processed.csv')
+knowledge_graph_proce = pd.read_csv('/home/apakiman/Repo/merck_gds_explr/.images/neo4j/data_primekg/kg.csv')
 
 
 # %%
