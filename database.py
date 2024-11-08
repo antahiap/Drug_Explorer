@@ -52,7 +52,7 @@ class Neo4jApp:
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
         (uri, user, password, datapath, database) = (
-            'bolt://localhost:6687', 'neo4j', 'explr_gds', '', 'neo4j')
+            'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', 'neo4j')
         
 
         #(uri, user, password, datapath, database) = get_keys(
