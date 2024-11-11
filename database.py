@@ -218,8 +218,8 @@ class Neo4jApp:
         if not self.session:
             self.create_session()
 
-        drugs_with_indication = pd.read_pickle(os.path.join(
-            self.data_path, 'drug_indication_subset.pkl'))
+#        drugs_with_indication = pd.read_pickle(os.path.join(
+ #           self.data_path, 'drug_indication_subset.pkl'))
 
         prediction = pd.read_pickle(os.path.join(
             self.data_path, filename))['prediction']
@@ -237,7 +237,7 @@ class Neo4jApp:
 
         for disease in prediction:
             drugs = prediction[disease]
-            drugs = [k for k in drugs.items() if k[0] in drugs_with_indication]
+            #drugs = [k for k in drugs.items() if k[0] in drugs_with_indication]
             top_drugs = sorted(
                 drugs, key=lambda item: item[1], reverse=True
             )[:Neo4jApp.top_n]

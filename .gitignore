@@ -20,3 +20,5 @@ mykeys.py
 
 
 env-*
+drugExplorer_quickstart/*
+!*/drugExplorer_quickstart.zip
