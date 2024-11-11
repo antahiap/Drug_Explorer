@@ -116,10 +116,10 @@ class Neo4jApp:
                 create_singel_index, node_type)
 
     def init_database(self):
-        self.clean_database()
-        self.create_index()
-        print('build attention graph...')
-        self.build_attention('graphmask_output_indication.csv')
+        # self.clean_database()
+        # self.create_index()
+        # print('build attention graph...')
+        # self.build_attention('graphmask_output_indication.csv')
         print('add predictions...')
         self.add_prediction()
         print('database initialization finished')
