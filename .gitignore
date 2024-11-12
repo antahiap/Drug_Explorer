@@ -20,5 +20,8 @@ mykeys.py
 
 
 env-*
+*.DS_Store
+*._data
+
 drugExplorer_quickstart/*
-!*/drugExplorer_quickstart.zip
+!drugExplorer_quickstart/*.zip

@@ -14,16 +14,19 @@ kiwisolver==1.3.1
 MarkupSafe==1.1.1
 matplotlib==3.3.4
 networkx==2.5
-numpy==1.20.1
-pandas==1.3.5
+numpy # for mac
+# numpy==1.20.1
+pandas==2.0.3 # 1.3.5 update to i be able to load saved pickels from TxGNN available model
 #pandas==1.2.3
 pyparsing==2.4.7
 pytz==2021.1
 pyzmq
 #pyzmq==20.0.0
 requests==2.25.1
-scikit-learn==0.24.1
-scipy==1.6.1
+scikit-learn # for mac
+#scikit-learn==0.24.1
+scipy # for mac
+#scipy==1.6.1
 threadpoolctl==2.1.0
 tqdm==4.59.0
 typing-extensions==3.7.4.3

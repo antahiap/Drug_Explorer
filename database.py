@@ -116,10 +116,10 @@ class Neo4jApp:
                 create_singel_index, node_type)
 
     def init_database(self):
-        # self.clean_database()
-        # self.create_index()
-        # print('build attention graph...')
-        # self.build_attention('graphmask_output_indication.csv')
+        self.clean_database()
+        self.create_index()
+        print('build attention graph...')
+        self.build_attention('graphmask_output_indication.csv')
         print('add predictions...')
         self.add_prediction()
         print('database initialization finished')
@@ -218,8 +218,8 @@ class Neo4jApp:
         if not self.session:
             self.create_session()
 
-#        drugs_with_indication = pd.read_pickle(os.path.join(
- #           self.data_path, 'drug_indication_subset.pkl'))
+        drugs_with_indication = pd.read_pickle(os.path.join(
+            self.data_path, 'graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
 
         prediction = pd.read_pickle(os.path.join(
             self.data_path, filename))['prediction']
@@ -237,7 +237,7 @@ class Neo4jApp:
 
         for disease in prediction:
             drugs = prediction[disease]
-            #drugs = [k for k in drugs.items() if k[0] in drugs_with_indication]
+            drugs = [k     for k in drugs.items() if k[0] in drugs_with_indication]
             top_drugs = sorted(
                 drugs, key=lambda item: item[1], reverse=True
             )[:Neo4jApp.top_n]
