@@ -153,6 +153,7 @@ class Neo4jApp:
                 'MERGE (node1)-[e: `{relation}` ]->(node2) '
                 'ON CREATE SET e.layer1_att = line.layer1_att, e.layer2_att= line.layer2_att '
             ).format(x_type=x_type,  y_type=y_type, relation=relation)
+            print(query)
             tx.run(query, lines=lines)
 
         def delete_empty_edge(tx):
@@ -191,20 +192,20 @@ class Neo4jApp:
                 }]
             else:
                 # commit previous lines, change x y type
-                # session.write_transaction(
-                #     commit_batch_attention, x_type, y_type, relation, lines=lines)
-                commit_batch_attention(
-                    session, x_type, y_type, relation, lines=lines)
+                session.write_transaction(
+                    commit_batch_attention, x_type, y_type, relation, lines=lines)
+                # commit_batch_attention(
+                    # session, x_type, y_type, relation, lines=lines)
                 delete_empty_edge(session)
                 x_type = row['x_type']
                 y_type = row['y_type']
                 relation = row['relation']
                 lines = []
-        # session.write_transaction(
-        #     commit_batch_attention, x_type, y_type, relation, lines=lines)
-        commit_batch_attention(session, x_type, y_type, relation, lines=lines)
-        # session.write_transaction(delete_empty_edge)
-        delete_empty_edge(session)
+        session.write_transaction(
+            commit_batch_attention, x_type, y_type, relation, lines=lines)
+        # commit_batch_attention(session, x_type, y_type, relation, lines=lines)
+        session.write_transaction(delete_empty_edge)
+        # delete_empty_edge(session)
 
     def remove_prediction(self):
         if not self.session:
