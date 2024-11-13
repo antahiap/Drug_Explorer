@@ -13,11 +13,13 @@ from config import SERVER_ROOT
 #from mykeys import get_keys
 # %%
 from flask import current_app, g
+from tqdm import tqdm
 
+DATABASE = 'txgnn'
 
 def get_db():
     if 'db' not in g:
-        db = Neo4jApp(server=current_app.config['GNN'], database='neo4j')
+        db = Neo4jApp(server=current_app.config['GNN'], database=DATABASE)
         db.create_session()
         g.db = db
     return g.db
@@ -52,8 +54,8 @@ class Neo4jApp:
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
         (uri, user, password, datapath, database) = (
-            'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', 'neo4j')
-        
+            'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
+            #'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', DATABASE)
 
         #(uri, user, password, datapath, database) = get_keys(
         #    server, password, user, datapath, database)
@@ -87,7 +89,7 @@ class Neo4jApp:
         def delete_all(tx, node):
             tx.run('MATCH (n: `{}`) DETACH DELETE n'.format(node))
 
-        for node_type in self.node_types:
+        for node_type in tqdm(self.node_types):
             self.session.write_transaction(delete_all, node_type)
         print('delete all nodes')
 
@@ -116,10 +118,10 @@ class Neo4jApp:
                 create_singel_index, node_type)
 
     def init_database(self):
-        self.clean_database()
-        self.create_index()
-        print('build attention graph...')
-        self.build_attention('graphmask_output_indication.csv')
+        # self.clean_database()
+        # self.create_index()
+        # print('build attention graph...')
+        # self.build_attention('graphmask_output_indication.csv')
         print('add predictions...')
         self.add_prediction()
         print('database initialization finished')
@@ -153,7 +155,6 @@ class Neo4jApp:
                 'MERGE (node1)-[e: `{relation}` ]->(node2) '
                 'ON CREATE SET e.layer1_att = line.layer1_att, e.layer2_att= line.layer2_att '
             ).format(x_type=x_type,  y_type=y_type, relation=relation)
-            print(query)
             tx.run(query, lines=lines)
 
         def delete_empty_edge(tx):
@@ -165,7 +166,8 @@ class Neo4jApp:
 
         print('build attention graph')
         session = self.session
-        for idx, row in attentions.iterrows():
+       
+        for idx, row in tqdm(attentions.iterrows(), total=len(attentions)):
             # print(idx, lines)
             if idx % self.batch_size == 0:
                 # fulfil batchsize, commit lines
@@ -236,7 +238,7 @@ class Neo4jApp:
 
         lines = []
 
-        for disease in prediction:
+        for disease in tqdm(prediction):
             drugs = prediction[disease]
             drugs = [k     for k in drugs.items() if k[0] in drugs_with_indication]
             top_drugs = sorted(
@@ -646,6 +648,6 @@ class Neo4jApp:
 
 if __name__ == '__main__':
     db = Neo4jApp(server='local', user='neo4j', 
-                  database='neo4j', datapath='TxGNNExplorer_v2')
+                  database=DATABASE, datapath='TxGNNExplorer_v2')
     db.init_database()
 # %%
