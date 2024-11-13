@@ -222,7 +222,7 @@ class Neo4jApp:
             self.create_session()
 
         drugs_with_indication = pd.read_pickle(os.path.join(
-            self.data_path, 'graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
+            self.data_path, 'gnnexplainer_output_indication.pkl')) #'graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
 
         prediction = pd.read_pickle(os.path.join(
             self.data_path, filename))['prediction']
