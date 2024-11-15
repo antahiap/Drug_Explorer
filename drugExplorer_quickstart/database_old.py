@@ -7,35 +7,25 @@ from neo4j.exceptions import ServiceUnavailable
 
 import pandas as pd
 import os
-import json
 
 from config import SERVER_ROOT
-#from mykeys import get_keys
-# %%
-from flask import current_app, g
-from tqdm import tqdm
 
-DATABASE = 'txgnn'
+from flask import current_app, g
+# %%
+
 
 def get_db():
     if 'db' not in g:
-        db = Neo4jApp(server=current_app.config['GNN'], database=DATABASE)
+        db = Neo4jApp(server=current_app.config['GNN'], database='neo4j')
         db.create_session()
         g.db = db
     return g.db
 
 
-# %%
 class Neo4jApp:
-    k1 = 5  # upper limit of children for root node
-    k2 = 5  # upper limit of children for hop-1 nodes
-    # path_thr = 45  # upper limit of path numbers
-    path_thr = 5  # upper limit for each metapath
-    top_n = 200  # write the predicted top n drugs to the graph database
-    # # Removed from graph base to reduce computation time
-    not_cool_node_pre = ['CYP']
-    not_cool_rel = ['rev_contraindication', 'contraindication', 'drug_drug', 'rev_off-label use', 'off-label use', 'anatomy_protein_absent', 'rev_anatomy_protein_absent', 'disease_phenotype_negative', 'rev_disease_phenotype_negative']
-
+    k1 = 12  # upper limit of children for root node
+    k2 = 7  # upper limit of children for hop-1 nodes
+    top_n = 50  # write the predicted top n drugs to the graph database
 
     def __init__(self, server, password='reader_password', user='reader', datapath='./colab_delivery/', database='drug'):
         self.node_types = [
@@ -53,15 +43,28 @@ class Neo4jApp:
         self.batch_size = 5000
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
-        (uri, user, password, datapath, database) = (
-            'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
-            #'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', DATABASE)
-
-        #(uri, user, password, datapath, database) = get_keys(
-        #    server, password, user, datapath, database)
+        scheme = "bolt"
+        port = 7687
         self.data_path = datapath
         self.database = database
 
+        if server == 'local':
+            host_name = "172.29.45.124"
+            password = 'morpheus'
+            user = 'neo4j'
+            self.database = 'txgnn'
+
+        # enterprise version, admin password is instance id
+        elif server == "attention":
+            host_name = 'ec2-18-222-212-215.us-east-2.compute.amazonaws.com'  # attention
+        elif server == 'graphmask':
+            host_name = 'ec2-18-116-204-62.us-east-2.compute.amazonaws.com'  # graph mask latest
+        elif server == 'mask2':
+            host_name = 'ec2-3-17-208-179.us-east-2.compute.amazonaws.com'  # graph mask2
+
+        # create driver
+        uri = "{scheme}://{host_name}:{port}".format(
+            scheme=scheme, host_name=host_name, port=port)
         try:
             self.driver = GraphDatabase.driver(
                 uri, auth=(user, password), encrypted=False, max_connection_lifetime=400)
@@ -70,7 +73,6 @@ class Neo4jApp:
 
         self.current_disease = None
         self.drugs = None
-        self.session = None
 
     def create_session(self):
         self.session = self.driver.session(database=self.database)
@@ -89,20 +91,9 @@ class Neo4jApp:
         def delete_all(tx, node):
             tx.run('MATCH (n: `{}`) DETACH DELETE n'.format(node))
 
-        for node_type in tqdm(self.node_types):
+        for node_type in self.node_types:
             self.session.write_transaction(delete_all, node_type)
         print('delete all nodes')
-
-    def remove_not_cool_nodes_edges(self):
-        if not self.session:
-            self.create_session()
-
-        for pre in Neo4jApp.not_cool_node_pre:
-            self.session.write_transaction(
-                    lambda tx: tx.run('MATCH (n: `gene/protein`) WHERE n.name STARTS WITH "{}" DETACH DELETE n'.format(pre)))
-        for rel in Neo4jApp.not_cool_rel:
-            self.session.write_transaction(
-                lambda tx: tx.run('MATCH ()-[r:{}]->() DELETE r'.format(rel)))
 
     def create_index(self):
 
@@ -118,27 +109,23 @@ class Neo4jApp:
                 create_singel_index, node_type)
 
     def init_database(self):
-        # self.clean_database()
-        # self.create_index()
-        # print('build attention graph...')
-        # self.build_attention('graphmask_output_indication.csv')
-        print('add predictions...')
+        self.clean_database()
+        self.create_index()
+        print('build attention graph...')
+        self.build_attention()
+        print('build prediction graph...')
         self.add_prediction()
         print('database initialization finished')
 
-    def build_attention(self, filename):
+    def build_attention(self, filename='attention_all.csv'):
 
         if not self.session:
             self.create_session()
 
         attention_path = os.path.join(self.data_path, filename)
         print('read attention file')
-        if filename.endswith('.csv'):
-            attentions = pd.read_csv(attention_path, dtype={
-                'x_id': 'string', 'y_id': 'string'})
-        elif filename.endswith('pkl'):
-            attentions = pd.read_pickle(attention_path)
-
+        attentions = pd.read_csv(attention_path, dtype={
+            'x_id': 'string', 'y_id': 'string'})
 
         lines = []
         x_type = ''
@@ -166,8 +153,7 @@ class Neo4jApp:
 
         print('build attention graph')
         session = self.session
-       
-        for idx, row in tqdm(attentions.iterrows(), total=len(attentions)):
+        for idx, row in attentions.iterrows():
             # print(idx, lines)
             if idx % self.batch_size == 0:
                 # fulfil batchsize, commit lines
@@ -194,35 +180,31 @@ class Neo4jApp:
                 }]
             else:
                 # commit previous lines, change x y type
-                session.write_transaction(
-                    commit_batch_attention, x_type, y_type, relation, lines=lines)
-                # commit_batch_attention(
-                    # session, x_type, y_type, relation, lines=lines)
+                # session.write_transaction(
+                #     commit_batch_attention, x_type, y_type, relation, lines=lines)
+                commit_batch_attention(
+                    session, x_type, y_type, relation, lines=lines)
                 delete_empty_edge(session)
                 x_type = row['x_type']
                 y_type = row['y_type']
                 relation = row['relation']
                 lines = []
-        session.write_transaction(
-            commit_batch_attention, x_type, y_type, relation, lines=lines)
-        # commit_batch_attention(session, x_type, y_type, relation, lines=lines)
-        session.write_transaction(delete_empty_edge)
-        # delete_empty_edge(session)
+        # session.write_transaction(
+        #     commit_batch_attention, x_type, y_type, relation, lines=lines)
+        commit_batch_attention(session, x_type, y_type, relation, lines=lines)
+        # session.write_transaction(delete_empty_edge)
+        delete_empty_edge(session)
 
     def remove_prediction(self):
         if not self.session:
             self.create_session()
-        # query = ('match (:disease)-[e:Prediction]->(:drug) delete e')
-        query = ('match (n:disease) remove n.predictions')
+        query = ('match (:disease)-[e:Prediction]->(:drug) delete e')
         self.session.run(query)
 
-    def add_prediction(self, filename='full_graph_split1_eval.pkl'):
+    def add_prediction(self, filename='result.pkl'):
 
         if not self.session:
             self.create_session()
-
-        drugs_with_indication = pd.read_pickle(os.path.join(
-            self.data_path, 'test')) #'gnnexplainer_output_indication.pkl')) #'graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
 
         prediction = pd.read_pickle(os.path.join(
             self.data_path, filename))['prediction']
@@ -230,31 +212,30 @@ class Neo4jApp:
         def commit_batch_prediction(tx, lines):
             query = (
                 'UNWIND $lines as line '
-                'MATCH (node: disease { id: line.disease_id }) '
-                'SET node.predictions = line.predictions '
-                'RETURN node'
+                'MATCH (node1: disease { id: line.x_id }) '
+                'MATCH (node2: drug { id: line.y_id }) '
+                'MERGE (node1)-[r: Prediction { relation: "rev_indication" } ]->(node2) '
+                'SET r.score = line.score '
+                'RETURN node1, node2'
             )
             tx.run(query, lines=lines)
 
         lines = []
 
-        for disease in tqdm(prediction):
-            drugs = prediction[disease]
-            drugs = [k     for k in drugs.items() if k[0] in drugs_with_indication]
+        for disease in prediction["rev_indication"]:
+            drugs = prediction["rev_indication"][disease]
             top_drugs = sorted(
-                drugs, key=lambda item: item[1], reverse=True
+                drugs.items(), key=lambda item: item[1], reverse=True
             )[:Neo4jApp.top_n]
-
             if len(lines) >= self.batch_size:
                 self.session.write_transaction(
                     commit_batch_prediction, lines=lines)
                 lines = []
             else:
                 lines += [
-                    {'disease_id': disease, 'predictions': json.dumps(
-                        [[drug[0], float(drug[1])] for drug in top_drugs])}  # drug[:2] -> drug_id, score
+                    {'x_id': disease, 'y_id': item[0], 'score':float(item[1])} for item in top_drugs
                 ]
-            self.session.write_transaction(commit_batch_prediction, lines=lines)
+        self.session.write_transaction(commit_batch_prediction, lines=lines)
 
     def query_diseases(self):
 
@@ -263,72 +244,51 @@ class Neo4jApp:
 
         def commit_diseases_query(tx):
             query = (
-                'MATCH (node:disease) '
-                'RETURN node.id'
+                'MATCH (node:disease)-[:Prediction]->(:drug)'
+                'RETURN node'
             )
             results = tx.run(query)
-            return list([k[0] for k in results])
+            disease_ids = [record['node']['id'] for record in results]
+            disease_ids = list(set(disease_ids))
+            return disease_ids
 
-        def commit_treatable_diseases_query(tx):
+        return self.session.read_transaction(commit_diseases_query)
+
+    def query_predicted_drugs(self, disease_id, top_n):
+
+        def commit_drugs_query(tx, disease_id):
             query = (
-                'MATCH (node:disease)-[e:rev_indication]->(:drug) '
-                'RETURN node.id'
+                'MATCH (:disease { id: $id })-[edge:Prediction]->(node:drug)'
+                'RETURN node, edge ORDER BY edge.score DESC LIMIT $top_n'
             )
-            results = tx.run(query)
-            # set to remove duplicate
-            return list(set([k[0] for k in results]))
+            results = tx.run(query, id=disease_id, top_n=top_n)
+            drugs = [{'score': record['edge']['score'],
+                      'id': record['node']['id']} for record in results]
+            return drugs
 
-        all_disease = self.session.read_transaction(commit_diseases_query)
-        treatable_diseases = self.session.read_transaction(
-            commit_treatable_diseases_query)
-
-        results = [[d, True if d in treatable_diseases else False]
-                   for d in all_disease]
-        return results
-
-    def query_predicted_drugs(self, disease_id, query_n):
-
-        def commit_pred_drugs_query(tx, disease_id):
-            # query = (
-            #     'MATCH (:disease { id: $id })-[edge:Prediction]->(node:drug)'
-            #     'RETURN node, edge ORDER BY edge.score DESC LIMIT $top_n'
-            # )
-            query = (
-                'MATCH (node:disease { id: $id })'
-                'RETURN node.predictions'
-            )
-            results = tx.run(query, id=disease_id)
-
-            predicted_drugs = json.loads(results.data()[0]['node.predictions'])[:query_n]
-
-            return predicted_drugs
-
-        def commit_known_drug_query(tx, disease_id):
-            query = (
-                'MATCH (:disease { id: $id })-[e:rev_indication]->(node:drug) '
-                'RETURN node.id'
-            )
-            results = tx.run(query, id=disease_id)
-
-            # set to remove duplicate
-            return list(set([k[0] for k in results]))
-
-        predicted_drugs = self.session.read_transaction(
-            commit_pred_drugs_query, disease_id)
-
-        known_drugs = self.session.read_transaction(
-            commit_known_drug_query, disease_id)
-
-        drugs = [
-            {'score': drug[1], 'id': drug[0],
-                "known": True if drug[0] in known_drugs else False}
-            for drug in predicted_drugs
-        ]
-
+        drugs = self.session.read_transaction(
+            commit_drugs_query, disease_id)
+        drugs = drugs[1:3] + drugs[6:]
         self.current_disease = disease_id
         self.drugs = drugs
 
         return drugs
+
+    def query_drug_disease_pair(self, disease_id, drug_id):
+        def commit_drug_disease_query(tx, disease_id, drug_id):
+            query = (
+                'MATCH (:disease { id: $disease_id })-[edge:Prediction]->(node:drug {id: $drug_id}) '
+                'RETURN edge'
+            )
+            results = tx.run(query, disease_id=disease_id, drug_id=drug_id)
+            pred = [{'score': record['edge']['score'],
+                     'relation': record['edge']['relation']} for record in results]
+            return pred[0]
+
+        pred = self.session.read_transaction(
+            commit_drug_disease_query, disease_id, drug_id)
+
+        return pred
 
     @staticmethod
     def get_tree(results, node_type, node_id):
@@ -357,10 +317,10 @@ class Neo4jApp:
                     edgeInfo = ''
                 elif depth == 1:
                     score = (rel['layer1_att'] + rel['layer2_att'])
-                    edgeInfo = rel['edge_info'] if rel['edge_info'] else rel.type
+                    edgeInfo = rel['edge_info'] if rel['edge_info']  else rel.type
                 else:
                     score = (rel['layer1_att'])
-                    edgeInfo = rel['edge_info'] if rel['edge_info'] else rel.type
+                    edgeInfo = rel['edge_info'] if rel['edge_info']  else rel.type
                 children.append({
                     'nodeId': node['id'],
                     'nodeType': Neo4jApp.get_node_labels(node)[0],
@@ -375,122 +335,72 @@ class Neo4jApp:
             return children
 
         children = []
-
         for i in range(len(results)):
             children = insertChild(children, results[i], 0, [node_id])
 
-        if len(children) == 0:
-            return {}
-        return children[0]
+        tree = children[0]
+        return tree
 
     @staticmethod
-    def commit_batch_attention_query(tx, node_type, root_nodes, k1, k2, rel1, rel2):
+    def commit_batch_attention_query(tx, node_type, root_nodes):
 
         query = (
-            'UNWIND $nodes as root_node ',
-            'MATCH  (node: {node_type} {{ id: root_node.id }})<-[rel: {rel1}]-(neighbor) '.format(
-                node_type=node_type, rel1=rel1),
-            # 'WHERE NOT (node)-[:Prediction]-(neighbor) '
+            'UNWIND $nodes as root_node '
+            'MATCH  (node: {node_type} {{ id: root_node.id }})<-[rel]-(neighbor) '
+            'WHERE NOT (node)-[:Prediction]-(neighbor) '
             'WITH node, neighbor, rel '
-            'ORDER BY (rel.layer1_att + rel.layer2_att + coalesce(rel.case_att, 0) ) DESC '
-            'WITH node, ',
-            'collect([ neighbor, rel])[0..{k1}] AS neighbors_and_rels '.format(
-                k1=k1) if k1 else 'collect([ neighbor, rel]) AS neighbors_and_rels ',
+            'ORDER BY (rel.layer1_att + rel.layer2_att ) DESC '
+            'WITH node, '
+            'collect([ neighbor, rel])[0..{k1}] AS neighbors_and_rels '
             'UNWIND neighbors_and_rels AS neighbor_and_rel '
             'WITH node, '
             'neighbor_and_rel[0] AS neighbor, '
             'neighbor_and_rel[1] AS rel '
-            'MATCH(neighbor)<-[rel2: {rel2}]-(neighbor2) '.format(rel2=rel2),
-            # 'WHERE NOT (neighbor)-[:Prediction]-(neighbor2) '
+            'MATCH(neighbor)<-[rel2]-(neighbor2) WHERE NOT (neighbor)-[:Prediction]-(neighbor2) '
             'WITH node, neighbor, rel, neighbor2, rel2 '
-            'ORDER BY (rel2.layer1_att + coalesce(rel2.case_att, 0) ) DESC '
-            'WITH node, neighbor, rel, ',
-            'collect([neighbor2, rel2])[0..{k2}] AS neighbors_and_rels2 '.format(
-                k2=k2) if k2 else 'collect([neighbor2, rel2]) AS neighbors_and_rels2 ',
+            'ORDER BY rel2.layer1_att DESC '
+            'WITH node, neighbor, rel, '
+            'collect([neighbor2, rel2])[0..{k2}] AS neighbors_and_rels2 '
             'UNWIND neighbors_and_rels2 AS neighbor_and_rel2 '
             'RETURN node, neighbor, rel, neighbor_and_rel2[0] AS neighbor2, neighbor_and_rel2[1] AS rel2 '
-        )
-
-        query = ' '.join(query)
+        ).format(node_type=node_type, k1=Neo4jApp.k1, k2=Neo4jApp.k2)
 
         results = tx.run(query, nodes=root_nodes)
         results = [
             [
                 {'node': record['node'], 'rel': 'none'},  # root node
                 {'node': record['neighbor'], 'rel': record['rel']},  # hop1
-                {'node': record['neighbor2'], 'rel': record['rel2']}  # hop2
+                {'node': record['neighbor2'],
+                 'rel': record['rel2']}  # hop2
             ]
             for record in results
         ]
         return results
-    
-    @staticmethod
-    def commit_edge_type_query(tx, node_type, node_id):
-        query = (
-            'MATCH (node: {node_type} {{ id: "{node_id}" }})<-[e1]-()<-[e2]-() '.format(node_type=node_type, node_id=node_id),
-            'RETURN DISTINCT type(e1) AS EdgeType1, type(e2) AS EdgeType2'
-        )
-        query = ' '.join(query)
-        results = tx.run(query)
-
-        return [[record['EdgeType1'],  record['EdgeType2']] for record in results]
 
     def query_attention(self, node_id, node_type):
         if not self.session:
             self.create_session()
 
-        edge_types = self.session.read_transaction(
-            Neo4jApp.commit_edge_type_query, node_type, node_id)
-        
-        results = []
-        
-        for edge_type in edge_types:
-            rel1, rel2 = edge_type
-
-            res = self.session.read_transaction(
-                Neo4jApp.commit_batch_attention_query, node_type, [{'id': node_id}], Neo4jApp.k1, Neo4jApp.k2, rel1, rel2)
- 
-            results += res
+        results = self.session.read_transaction(
+            Neo4jApp.commit_batch_attention_query, node_type, [{'id': node_id}])
 
         tree = self.get_tree(results, node_type, node_id)
 
-        return results, tree
+        return tree
 
-    # called by API
     def query_attention_pair(self, disease_id, drug_id):
         if not self.session:
             self.create_session()
 
-        # drug_paths = self.session.read_transaction(
-        #     Neo4jApp.commit_batch_attention_query, "drug", [{'id': drug_id}], 30, 20)
-
-        # disease_paths = self.session.read_transaction(
-        #     Neo4jApp.commit_batch_attention_query, "disease", [{'id': disease_id}], Neo4jApp.k1, Neo4jApp.k2)
-
-        # def topk_paths(paths, k):
-        #     '''
-        #     Params:
-        #     path: Array<[{node, rel}, [node, rel]]>
-        #     k: top k
-        #     Return: top k paths
-        #     '''
-        #     if k is None:
-        #         return paths
-        #     paths.sort(key=lambda x: x[1]['rel']['layer2_att']+x[1]['rel']
-        #                ['layer1_att'] + x[2]['rel']['layer1_att'], reverse=True)
-        #     return paths[:k]
-        # drug_paths = topk_paths(drug_paths, Neo4jApp.k1 * Neo4jApp.k2)
-        # disease_paths = topk_paths(disease_paths, Neo4jApp.k1 * Neo4jApp.k2)
-
+        drug_paths = self.session.read_transaction(
+            Neo4jApp.commit_batch_attention_query, "drug", [{'id': drug_id}])
+        disease_paths = self.session.read_transaction(
+            Neo4jApp.commit_batch_attention_query, "disease", [{'id': disease_id}])
 
         def convert(e, i):
-            return {'edgeInfo': e['edge_info'] if e['edge_info'] else e.type, 'score': e['layer1_att'] + e['layer2_att'] if i == 0 else e['layer1_att']}
+            return {'edgeInfo': e['edge_info'] if e['edge_info']  else e.type, 'score': e['layer1_att'] + e['layer2_att'] if i == 0 else e['layer1_att']}
 
-        disease_paths, disease_tree = self.query_attention(
-            disease_id, 'disease')
-        drug_paths, drug_tree = self.query_attention(drug_id, 'drug')
-        
-        paths = []
+        metapaths = []
         existing_path = []
 
         for disease_path in disease_paths:
@@ -502,7 +412,7 @@ class Neo4jApp:
                         type_a = Neo4jApp.get_node_labels(node_a)[0]
                         type_b = Neo4jApp.get_node_labels(node_b)[0]
                         if type_a == type_b and node_a['id'] == node_b['id']:
-                            # find a path, update path
+                            # find a path, update metapath
                             nodes = [
                                 {
                                     'nodeId': item['node']['id'],
@@ -515,11 +425,11 @@ class Neo4jApp:
                             # if duplicated items in path, ignore
                             if len(node_ids) > len(set(node_ids)):
                                 continue
-                            path_string = '-'.join(node_ids)
-                            if path_string in existing_path:
+                            metapath_string = '-'.join(node_ids)
+                            if metapath_string in existing_path:
                                 pass
                             else:
-                                existing_path.append(path_string)
+                                existing_path.append(metapath_string)
                                 # the edge calculation is tricky here
                                 edges = [convert(item['rel'], i) for i, item in enumerate(disease_path[1:idx_a+1])] + (
                                     [convert(item['rel'], i) for i, item in enumerate(
@@ -527,40 +437,19 @@ class Neo4jApp:
                                      ][::-1]
                                 )
 
-                                path = {
+                                metapath = {
                                     'nodes': nodes,
-                                    'edges': edges,
-                                    'avg_score': sum([e['score'] for e in edges])/len(edges)
+                                    'edges': edges
                                 }
-                                paths.append(path)
-        
-        # for all paths, keep top n for each metapath based on path score
-        metapaths = {}
-        for path in paths:
-            metapath = '-'.join([node['nodeType'] for node in path['nodes']])
-            if metapath in metapaths:
-                metapaths[metapath].append(path)
-                metapaths[metapath].sort(key=lambda x: x['avg_score'], reverse=True)
-                if len(metapaths[metapath]) > Neo4jApp.path_thr:
-                    metapaths[metapath] = metapaths[metapath][:Neo4jApp.path_thr]
-            else:
-                metapaths[metapath] = [path]
-
-        # flatten metapaths
-        sorted_paths = []
-        for metapath in metapaths:
-            sorted_paths += metapaths[metapath]
+                                metapaths.append(metapath)
 
         attention = {}
-        attention['{}:{}'.format('disease', disease_id)] = disease_tree
-        attention['{}:{}'.format('drug', drug_id)
-                  ] = drug_tree
+        attention['{}:{}'.format('disease', disease_id)] = self.get_tree(
+            disease_paths, 'diseaase', disease_id)
+        attention['{}:{}'.format('drug', drug_id)] = self.get_tree(
+            drug_paths, 'drug', drug_id)
 
-        # sort paths by score
-        paths.sort(key=lambda x: sum(
-            [e['score'] for e in x['edges']])/len(x['edges']), reverse=True)
-
-        return {'attention': attention, "paths": sorted_paths}
+        return {'attention': attention, "metapaths": metapaths}
 
     @staticmethod
     def get_node_labels(node):
@@ -643,11 +532,4 @@ class Neo4jApp:
         metapaths.sort(key=lambda x: x['sum'], reverse=True)
         return metapaths
 
-# %%
-
-
-if __name__ == '__main__':
-    db = Neo4jApp(server='local', user='neo4j', 
-                  database=DATABASE, datapath='TxGNNExplorer_v2')
-    db.init_database()
 # %%

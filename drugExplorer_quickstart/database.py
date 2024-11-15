@@ -264,7 +264,7 @@ class Neo4jApp:
         def commit_diseases_query(tx):
             query = (
                 'MATCH (node:disease) '
-                'RETURN node.id'
+                'RETURN node.name'
             )
             results = tx.run(query)
             return list([k[0] for k in results])
