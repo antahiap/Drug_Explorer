@@ -16,6 +16,7 @@ from flask import current_app, g
 from tqdm import tqdm
 
 DATABASE = 'txgnn'
+DATABASE = 'neo4j'
 
 def get_db():
     if 'db' not in g:
@@ -54,8 +55,8 @@ class Neo4jApp:
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
         (uri, user, password, datapath, database) = (
-            'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
-            #'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', DATABASE)
+            #'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
+            'bolt://localhost:7687', 'neo4j', 'explr_gds', './data', DATABASE)
 
         #(uri, user, password, datapath, database) = get_keys(
         #    server, password, user, datapath, database)
@@ -264,7 +265,7 @@ class Neo4jApp:
         def commit_diseases_query(tx):
             query = (
                 'MATCH (node:disease) '
-                'RETURN node.name'
+                'RETURN node.id'#.name'
             )
             results = tx.run(query)
             return list([k[0] for k in results])
@@ -288,6 +289,9 @@ class Neo4jApp:
 
     def query_predicted_drugs(self, disease_id, query_n):
 
+        if not self.session:
+            self.create_session()
+
         def commit_pred_drugs_query(tx, disease_id):
             # query = (
             #     'MATCH (:disease { id: $id })-[edge:Prediction]->(node:drug)'
@@ -297,7 +301,7 @@ class Neo4jApp:
                 'MATCH (node:disease { id: $id })'
                 'RETURN node.predictions'
             )
-            results = tx.run(query, id=disease_id)
+            results = tx.run(query, id=str(disease_id))
 
             predicted_drugs = json.loads(results.data()[0]['node.predictions'])[:query_n]
 
@@ -649,5 +653,8 @@ class Neo4jApp:
 if __name__ == '__main__':
     db = Neo4jApp(server='local', user='neo4j', 
                   database=DATABASE, datapath='TxGNNExplorer_v2')
-    db.init_database()
+#    db.init_database()
+    db.create_session()
+    db.query_predicted_drugs(3847.0, 20)
+
 # %%

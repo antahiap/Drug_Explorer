@@ -75,14 +75,18 @@ def get_drug_predictions():
     '''
     TOP_N = 15  # default, query top 10 predictions
     disease_id = request.args.get('disease_id', None, type=str)
-    top_n = request.args.get('top_n', TOP_N, type=int)
+    top_n = TOP_N # request.args.get('top_n', TOP_N, type=int)
+    # db = get_db()
+    # predictions = db.query_predicted_drugs(
+    #     disease_id=disease_id)#, top_n=top_n)
     db = get_db()
+    QUERY_N = 20
     predictions = db.query_predicted_drugs(
-        disease_id=disease_id, top_n=top_n)
+        disease_id=disease_id, query_n = QUERY_N)
 
-    summary = db.query_metapath_summary(top_n=top_n)
+    #summary = db.query_metapath_summary(top_n=top_n)
 
-    return jsonify({'predictions': predictions, 'metapath_summary': summary})
+    return jsonify({'predictions': predictions})#, 'metapath_summary': summary})
 
 @api.route('/link_pred', methods=['GET'])
 def get_link_pred():
