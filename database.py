@@ -16,6 +16,7 @@ from flask import current_app, g
 from tqdm import tqdm
 
 DATABASE = 'txgnn'
+DATABASE = 'neo4j'
 
 def get_db():
     if 'db' not in g:
@@ -54,8 +55,8 @@ class Neo4jApp:
         # self.data_path = 'https://drug-gnn-models.s3.us-east-2.amazonaws.com/collaboration_delivery/'
 
         (uri, user, password, datapath, database) = (
-            'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
-            #'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', DATABASE)
+            #'bolt://172.29.45.124:7687', 'neo4j', 'morpheus', './data', DATABASE)
+            'bolt://localhost:6687', 'neo4j', 'explr_gds', './data', DATABASE)
 
         #(uri, user, password, datapath, database) = get_keys(
         #    server, password, user, datapath, database)
@@ -118,10 +119,10 @@ class Neo4jApp:
                 create_singel_index, node_type)
 
     def init_database(self):
-        # self.clean_database()
-        # self.create_index()
-        # print('build attention graph...')
-        # self.build_attention('graphmask_output_indication.csv')
+        self.clean_database()
+        self.create_index()
+        print('build attention graph...')
+        self.build_attention('graphmask_output_indication.csv')
         print('add predictions...')
         self.add_prediction()
         print('database initialization finished')
@@ -222,7 +223,7 @@ class Neo4jApp:
             self.create_session()
 
         drugs_with_indication = pd.read_pickle(os.path.join(
-            self.data_path, 'test')) #'gnnexplainer_output_indication.pkl')) #'graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
+            self.data_path, 'drug_id.pkl' )) #'attention_output_indication.pkl' )) #gnnexplainer_output_indication.pkl' )) #graphmask_output_indication.pkl')) #drug_indication_subset.pkl'))
 
         prediction = pd.read_pickle(os.path.join(
             self.data_path, filename))['prediction']
@@ -241,6 +242,7 @@ class Neo4jApp:
         for disease in tqdm(prediction):
             drugs = prediction[disease]
             drugs = [k     for k in drugs.items() if k[0] in drugs_with_indication]
+            if len(drugs) == 0: continue
             top_drugs = sorted(
                 drugs, key=lambda item: item[1], reverse=True
             )[:Neo4jApp.top_n]
