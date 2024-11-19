@@ -26,3 +26,4 @@ env-*
 drugExplorer_quickstart/*
 !drugExplorer_quickstart/*.zip
 !drugExplorer_quickstart/*.py
+node_modules

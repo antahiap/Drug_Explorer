@@ -332,6 +332,7 @@ class Neo4jApp:
         self.current_disease = disease_id
         self.drugs = drugs
 
+        import pdb; pdb.set_trace()
         return drugs
 
     @staticmethod
@@ -580,6 +581,7 @@ class Neo4jApp:
         if not self.drugs:
             self.query_predicted_drugs(self.current_disease, top_n)
 
+        import pdb; pdb.set_trace()
         drug_paths = self.session.read_transaction(
             Neo4jApp.commit_batch_attention_query, 'drug', self.drugs)
         disease_paths = self.session.read_transaction(
