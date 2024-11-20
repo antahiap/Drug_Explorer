@@ -312,12 +312,10 @@ export default class ModelNodeForce extends React.Component<Props, State> {
   }
 
   updateNodeLabel() {
-    let svgNodes: d3.Selection<
-      SVGGElement,
-      INode,
-      d3.BaseType,
-      any
-    > = d3.select('svg.graph').select('g.nodes').selectAll('g.nodeGroup');
+    let svgNodes: d3.Selection<SVGGElement, INode, d3.BaseType, any> = d3
+      .select('svg.graph')
+      .select('g.nodes')
+      .selectAll('g.nodeGroup');
 
     svgNodes
       .filter((d) => this.isTargetNode(d) || this.isHighlighted(d))

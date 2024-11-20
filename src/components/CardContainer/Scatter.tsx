@@ -167,7 +167,9 @@ class Scatter extends React.Component<Props, State> {
             onDoubleClick={() => {
               if (isHighlighted) this.onChangeDrug(drugId);
             }}
-            onClick={() => this.showTooltip(drugId, [xScale(x), yScale(y)])}
+            onClick={() =>
+              this.showTooltip(drugId, [xScale(x) ?? 0, yScale(y) ?? 0])
+            }
             // onMouseLeave={() => this.hideTooltip()}
           />
         );

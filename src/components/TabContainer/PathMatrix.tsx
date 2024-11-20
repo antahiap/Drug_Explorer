@@ -499,9 +499,8 @@ class PathMatrix extends React.Component<Props, State> {
           prevPath = metaPaths[childIdx - 1];
         }
         if (prevPath !== undefined) {
-          const { nodeId: prevNodeId, nodeType: prevNodeType } = prevPath.nodes[
-            nodeIdx
-          ];
+          const { nodeId: prevNodeId, nodeType: prevNodeType } =
+            prevPath.nodes[nodeIdx];
           prevNodeName = nodeNameDict[prevNodeType][prevNodeId];
         }
 
