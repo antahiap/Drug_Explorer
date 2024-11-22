@@ -558,6 +558,7 @@ class PathMatrix extends React.Component<Props, State> {
         const edgeShortName = cropText(edgeName, 14, this.EDGE_LENGTH);
         return (
           <Tooltip
+            key={`tooltip_edge_${edgeIdx}`}
             title={edgeShortName === edgeName ? '' : edgeName}
             destroyTooltipOnHide
           >
