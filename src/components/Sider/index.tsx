@@ -99,6 +99,7 @@ class DrugSider extends React.Component<Props> {
 
     const untreatable_disease_icon = (
       <Tooltip
+        key="untreatable_disease"
         // title="The knowledge graph contains no drug for treating this disease"
         title="Diseases with no known drug indications in the dataset"
       >
@@ -108,6 +109,7 @@ class DrugSider extends React.Component<Props> {
 
     const known_drug_icon = (
       <Tooltip
+        key="known_drug_icon"
         // title="the knowledge graph contains this drug indication"
         title="US FDA-approved drug indication"
       >
