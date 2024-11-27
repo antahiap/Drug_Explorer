@@ -131,9 +131,21 @@ class DrugSider extends React.Component<Props> {
         >
           {diseaseOptions.length > 0 ? (
             diseaseOptions
-              .filter(
-                (d) => !wheterRemoveDisease(nodeNameDict['disease'][d[0]]) // remove some diseases that are too general
-              )
+              //.filter(
+              //  (d) => !wheterRemoveDisease(nodeNameDict['disease'][d[0]]) // remove some diseases that are too general
+              //)
+              .filter((d) => {
+                const diseaseId = d[0];
+                const diseaseName = nodeNameDict['disease'][diseaseId];
+                // Log if diseaseName is undefined
+                if (diseaseName === undefined) {
+                  console.warn(
+                    `Disease ID "${diseaseId}" is undefined in nodeNameDict['disease'].`
+                  );
+                }
+                // Check if the disease should be removed
+                return !wheterRemoveDisease(diseaseName);
+              })
               .map((d) => {
                 const [id, treatable] = d;
                 const name = nodeNameDict['disease'][id];
