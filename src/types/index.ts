@@ -79,6 +79,7 @@ export type DrugPrediction = {
   selected: boolean;
 };
 
+
 export interface IState {
   edgeThreshold: number;
   nodeTypes: string[];
@@ -95,4 +96,5 @@ export interface IState {
   metaPathGroups: { [drugID: string]: IMetaPath[] };
   metaPathSummary: IMetaPathSummary[]; // each element is a group of paths with the same node types
   selectedPathNodes: IPath['nodes'];
+  drugUrls:  { [key: string]: string };
 }

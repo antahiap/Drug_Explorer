@@ -89,6 +89,11 @@ const rootReducer = (state: IState, action: IAction): IState => {
         ),
       };
     }
+    case ACTION_TYPES.Load_Drug_Urls:
+      return {
+        ...state,
+        drugUrls: action.payload.drugUrls, // Action payload should be an object with string keys and string values
+      };
 
     default:
       return state;

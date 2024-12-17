@@ -12,6 +12,12 @@ const axiosInstance = axios.create({
   },
 });
 
+const requestDrugUrls = async (): Promise<{ [key: string]: string }> => {
+  const url = './txgnn_data/drug_url_map.json';
+  let response = await axiosInstance.get(url);
+  return response.data;
+};
+
 const requestNodeTypes = async (): Promise<string[]> => {
   const url = './txgnn_data/node_types.json';
   let response = await axiosInstance.get(url);
@@ -76,6 +82,7 @@ const requestEmbedding = async () => {
 };
 
 export {
+  requestDrugUrls,
   requestNodeTypes,
   requestEdgeTypes,
   requestAttention,
