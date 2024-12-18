@@ -1,4 +1,4 @@
-const HOST = '172.29.45.53';
+const HOST = '172.29.45.178';
 const STATIC_URL =
   process.env.NODE_ENV === 'development'
     ? `http://${HOST}:${process.env.REACT_APP_PORT}`

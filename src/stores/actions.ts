@@ -19,6 +19,8 @@ export const ACTION_TYPES = {
   Load_Node_Name_Dict: 'Load_Node_Name_Dict',
   Load_Drug_Options: 'Load_Drug_Options',
   Load_Disease_Options: 'Load_Disease_Options',
+  Load_Drug_Urls: 'Load_Drug_Urls',
+  Load_Disease_Urls: 'Load_Disease_Urls',
 
   Set_Loading_Status: 'Set_Loading_Status',
 

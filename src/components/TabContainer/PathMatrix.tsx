@@ -49,6 +49,7 @@ class PathMatrix extends React.Component<Props, State> {
     this.hideModal = this.hideModal.bind(this);
     this.filterMetaPathGroups = this.filterMetaPathGroups.bind(this);
   }
+
   toggleExpand(idx: number, flag: undefined | boolean) {
     let { expand } = this.state;
     if (flag === undefined) {
@@ -512,7 +513,6 @@ class PathMatrix extends React.Component<Props, State> {
         let translate = `translate(${
           (this.EDGE_LENGTH + this.NODE_WIDTH) * nodeIdx
         }, ${0})`;
-
         return (
           <Tooltip
             key={`node_${nodeIdx}`}
@@ -522,14 +522,35 @@ class PathMatrix extends React.Component<Props, State> {
               transform={translate}
               className={`node_${nodeId}`}
               style={{ cursor: 'pointer' }}
-              onClick={() =>
-                nodeType === 'drug' &&
-                window.open(
-                  `https://go.drugbank.com/drugs/${nodeId}`,
-                  'windowName',
-                  'popup,right=10,top=10,width=320,height=600'
-                )
-              }
+              onClick={() => {
+                if (nodeType == 'drug') {
+                  const url = this.props.globalState.drugUrls[nodeId];
+                  if (url) {
+                    window.open(
+                      url,
+                      'windowName',
+                      'popup,right=10,top=10,width=320,height=600'
+                    );
+                  } else {
+                    console.error(`No URL found for drugId: ${nodeId}`);
+                  }
+                } else if (nodeType === 'disease') {
+                  console.log(`Disease node clicked: ${nodeId}`);
+                  console.log(` ${this.props.globalState.diseaseUrls}`);
+                  const diseaseUrl = this.props.globalState.diseaseUrls[nodeId];
+                  if (diseaseUrl) {
+                    window.open(
+                      diseaseUrl,
+                      'windowName',
+                      'popup,right=10,top=10,width=320,height=600'
+                    );
+                  } else {
+                    console.error(`No URL found for diseaseId: ${nodeId}`);
+                  }
+                } else {
+                  console.log(`Unknown node type clicked: ${nodeType}`);
+                }
+              }}
             >
               <rect
                 width={this.NODE_WIDTH}
