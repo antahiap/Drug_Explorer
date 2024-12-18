@@ -534,6 +534,21 @@ class PathMatrix extends React.Component<Props, State> {
                   } else {
                     console.error(`No URL found for drugId: ${nodeId}`);
                   }
+                } else if (nodeType === 'disease') {
+                  console.log(`Disease node clicked: ${nodeId}`);
+                  console.log(` ${this.props.globalState.diseaseUrls}`);
+                  const diseaseUrl = this.props.globalState.diseaseUrls[nodeId];
+                  if (diseaseUrl) {
+                    window.open(
+                      diseaseUrl,
+                      'windowName',
+                      'popup,right=10,top=10,width=320,height=600'
+                    );
+                  } else {
+                    console.error(`No URL found for diseaseId: ${nodeId}`);
+                  }
+                } else {
+                  console.log(`Unknown node type clicked: ${nodeType}`);
                 }
               }}
             >

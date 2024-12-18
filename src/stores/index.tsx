@@ -19,6 +19,7 @@ const initialState: IState = {
   metaPathSummary: [],
   selectedPathNodes: [],
   drugUrls: {},
+  diseaseUrls: {},
 };
 
 interface IStateContext {

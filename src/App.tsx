@@ -10,6 +10,7 @@ import { StateConsumer } from 'stores';
 import { IState, IDispatch } from 'types';
 import { ACTION_TYPES, selectDisease, selectDrug } from 'stores/actions';
 import {
+  requestDiseaseUrls,
   requestDrugUrls,
   requestNodeTypes,
   requestEdgeTypes,
@@ -94,6 +95,13 @@ class App extends React.Component<Props, State> {
         this.props.dispatch({
           type: ACTION_TYPES.Load_Drug_Urls,
           payload: { drugUrls },
+        });
+      })
+      .then(() => requestDiseaseUrls())
+      .then((diseaseUrls) => {
+        this.props.dispatch({
+          type: ACTION_TYPES.Load_Disease_Urls,
+          payload: { diseaseUrls },
         });
       })
       .then(() => selectDisease(INIT_DISEASE, this.props.dispatch))

@@ -97,4 +97,5 @@ export interface IState {
   metaPathSummary: IMetaPathSummary[]; // each element is a group of paths with the same node types
   selectedPathNodes: IPath['nodes'];
   drugUrls:  { [key: string]: string };
+  diseaseUrls:  { [key: string]: string };
 }
