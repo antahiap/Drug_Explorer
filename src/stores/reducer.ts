@@ -100,6 +100,12 @@ const rootReducer = (state: IState, action: IAction): IState => {
         diseaseUrls: action.payload.diseaseUrls, // Action payload should be an object with string keys and string values
       };
 
+    case ACTION_TYPES.Load_Graph_Data:
+      return {
+        ...state,
+        graphData: action.payload.graphData, // Store the fetched graph data in the state
+      };
+
     default:
       return state;
   }

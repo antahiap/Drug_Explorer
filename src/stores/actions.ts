@@ -8,6 +8,7 @@ import {
 import {
   requestAttentionPair,
   requestDrugPredictions,
+  requestSourceGraphData,
 } from 'stores/DataService';
 
 export const ACTION_TYPES = {
@@ -29,6 +30,8 @@ export const ACTION_TYPES = {
   Change_Disease: 'Change_Disease',
   Select_Path_Noes: 'Select_Path_Nodes',
 
+  Load_Graph_Data: 'Load_Graph_Data',
+
   Toggle_Meta_Path_Hide: 'Toggle_Meta_Path_Hide',
 };
 
@@ -41,6 +44,21 @@ export const selectDrug = (
   if (selectedDisease) {
     modifyAttentionPaths(selectedDrug, selectedDisease, isAdd, dispatch);
     changeDrug(selectedDrug, dispatch);
+
+    // Call requestSourceGraphData after updating the state
+    requestSourceGraphData(selectedDisease, selectedDrug)
+      .then((response) => {
+        console.log('Source Graph Data:', response.data);
+
+        // Dispatch action to store graph data in Redux (if needed)
+        dispatch({
+          type: 'Load_Graph_Data',
+          payload: { graphData: response.data },
+        });
+      })
+      .catch((error) => {
+        console.error('Error fetching source graph data:', error);
+      });
   }
 };
 

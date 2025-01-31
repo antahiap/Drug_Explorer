@@ -5,6 +5,7 @@ import { IState, IDispatch } from 'types';
 
 import AttentionTree from './AttentionTree';
 import Graph from './Graph';
+import SourceGraph from './SourceGraph';
 
 import './index.css';
 import PathMatrix from 'components/TabContainer/PathMatrix';
@@ -106,6 +107,23 @@ class NodeLink extends React.Component<Props, State> {
             }}
           >
             <Graph {...props} />
+          </div>
+        </TabPane>
+
+        <TabPane
+          style={{ padding: this.padding }}
+          key="source-graph"
+          tab="Source-Graph"
+        >
+          <div
+            className="nodelink"
+            style={{
+              width: cardWidth,
+              height: cardHeight,
+              overflowY: 'scroll',
+            }}
+          >
+            <SourceGraph {...props} />
           </div>
         </TabPane>
       </Tabs>

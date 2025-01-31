@@ -20,6 +20,7 @@ const initialState: IState = {
   selectedPathNodes: [],
   drugUrls: {},
   diseaseUrls: {},
+  graphData: {},
 };
 
 interface IStateContext {

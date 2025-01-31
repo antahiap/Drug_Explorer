@@ -81,6 +81,12 @@ const requestDrugPredictions = async (diseaseID: string) => {
   return predictions;
 };
 
+const requestSourceGraphData = async (diseaseID: string, drugID: string) => {
+  const url = `./api/source_graph_data?disease=${diseaseID}&drug=${drugID}`;
+  const response = await axiosInstance.get(url);
+  return response;
+};
+
 const requestEmbedding = async () => {
   const url = './txgnn_data/drug_tsne.json';
   const response = await axiosInstance.get(url);
@@ -98,4 +104,5 @@ export {
   requestDiseaseOptions,
   requestEmbedding,
   requestAttentionPair,
+  requestSourceGraphData,
 };
