@@ -124,6 +124,7 @@ class NodeLink extends React.Component<Props, State> {
             }}
           >
             <SourceGraph {...props} />
+            
           </div>
         </TabPane>
       </Tabs>

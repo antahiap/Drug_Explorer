@@ -98,5 +98,6 @@ export interface IState {
   selectedPathNodes: IPath['nodes'];
   drugUrls:  { [key: string]: string };
   diseaseUrls:  { [key: string]: string };
-  graphData?: any;
+  graphData: any;
+  isGraphLoading:boolean;
 }

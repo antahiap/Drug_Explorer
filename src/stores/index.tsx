@@ -21,6 +21,7 @@ const initialState: IState = {
   drugUrls: {},
   diseaseUrls: {},
   graphData: {},
+  isGraphLoading: false,
 };
 
 interface IStateContext {

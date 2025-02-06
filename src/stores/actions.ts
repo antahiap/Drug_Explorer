@@ -35,17 +35,34 @@ export const ACTION_TYPES = {
   Toggle_Meta_Path_Hide: 'Toggle_Meta_Path_Hide',
 };
 
+let graphLoadTimeout: NodeJS.Timeout;
+
 export const selectDrug = (
   selectedDrug: string,
   selectedDisease: string | undefined,
   isAdd: boolean,
   dispatch: IDispatch
 ) => {
-  if (selectedDisease) {
-    modifyAttentionPaths(selectedDrug, selectedDisease, isAdd, dispatch);
-    changeDrug(selectedDrug, dispatch);
+  if (!selectedDrug || !selectedDisease) {
+    // Reset the graph data to initial state
+    dispatch({
+      type: 'Load_Graph_Data',
+      payload: { graphData: {} }, // Replace [] with your initial state data if needed
+    });
+    console.log('Source Graph Data:', {});
+    return;
+  }
 
-    // Call requestSourceGraphData after updating the state
+  modifyAttentionPaths(selectedDrug, selectedDisease, isAdd, dispatch);
+  changeDrug(selectedDrug, dispatch);
+
+  // Clear any previous timeout to debounce the loadGraph call
+  if (graphLoadTimeout) {
+    clearTimeout(graphLoadTimeout);
+  }
+
+  // Set a delay to allow the user to select more diseases before loading the graph
+  graphLoadTimeout = setTimeout(() => {
     requestSourceGraphData(selectedDisease, selectedDrug)
       .then((response) => {
         console.log('Source Graph Data:', response.data);
@@ -59,7 +76,7 @@ export const selectDrug = (
       .catch((error) => {
         console.error('Error fetching source graph data:', error);
       });
-  }
+  }, 1000); // Adjust the delay (in milliseconds) as needed
 };
 
 export const selectDisease = (selectedDisease: string, dispatch: IDispatch) => {
@@ -76,6 +93,11 @@ export const selectDisease = (selectedDisease: string, dispatch: IDispatch) => {
   dispatch({
     type: ACTION_TYPES.Change_Drug,
     payload: { selectedDrug: undefined },
+  });
+
+  dispatch({
+    type: ACTION_TYPES.Load_Graph_Data,
+    payload: { graphData: {} }, // Replace [] with your initial state data if needed
   });
 
   return requestDrugPredictions(selectedDisease)
